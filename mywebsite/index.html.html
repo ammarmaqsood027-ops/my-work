@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Demo: Camera & Location (Consent Required)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width:700px; margin:auto; }
+    #video { width: 100%; max-height: 400px; background:#000; }
+    button { padding:10px 16px; margin:8px 0; font-size:16px; }
+    .note { color:#555; font-size:14px; }
+  </style>
+</head>
+<body>
+  <h1>Demo: Camera & Location (Consent)</h1>
+  <p class="note">This is a harmless demo. We will <strong>only</strong> access your camera and location if you click allow. We will display them on this page only.</p>
+
+  <button id="startBtn">Allow camera & location</button>
+  <button id="stopBtn" disabled>Stop camera</button>
+
+  <h3>Live camera</h3>
+  <video id="video" autoplay playsinline></video>
+
+  <h3>Location</h3>
+  <pre id="loc">Location not requested yet.</pre>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const video = document.getElementById('video');
+    const loc = document.getElementById('loc');
+    let stream = null;
+    let watchId = null;
+
+    startBtn.onclick = async () => {
+      try {
+        // request camera
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        stopBtn.disabled = false;
+        startBtn.disabled = true;
+
+        // request location (prompts user)
+        if ('geolocation' in navigator) {
+          loc.textContent = 'Requesting location...';
+          watchId = navigator.geolocation.watchPosition(
+            (p) => {
+              loc.textContent = 'Latitude: ' + p.coords.latitude + '\\nLongitude: ' + p.coords.longitude + '\\nAccuracy: ' + p.coords.accuracy + ' meters';
+            },
+            (err) => {
+              loc.textContent = 'Location error: ' + err.message;
+            },
+            { enableHighAccuracy: false, maximumAge: 10000, timeout: 10000 }
+          );
+        } else {
+          loc.textContent = 'Geolocation not supported on this device.';
+        }
+      } catch (e) {
+        alert('Permission denied or error: ' + e.message);
+      }
+    };
+
+    stopBtn.onclick = () => {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+        stream = null;
+      }
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      loc.textContent = 'Stopped. Location not being tracked.';
+    };
+  </script>
+</body>
+</html>
